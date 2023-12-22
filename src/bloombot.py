@@ -1,35 +1,53 @@
-import google.generativeai as palm
+import google.generativeai as genai
 from discord.ext import commands
 import yaml
+import re
+
 
 with open("creds.yaml", 'r') as creds:
     credentials = yaml.safe_load(creds)
     bot_token = credentials['bot_token']
-    palm_key = credentials['palm_key']
-    
-palm.configure(api_key = palm_key)
+    genai_key = credentials['palm_key']
 
-defaults = {
-    'model': 'models/text-bison-001',
-    'temperature': 0.7,
-    'candidate_count': 1,
-    'top_k': 40,
-    'top_p': 0.95,
-    'max_output_tokens': 2000,
-    'stop_sequences': [],
-    'safety_settings': [{"category": "HARM_CATEGORY_DEROGATORY", "threshold": 3},
-                        {"category": "HARM_CATEGORY_TOXICITY", "threshold": 3},
-                        {"category": "HARM_CATEGORY_VIOLENCE", "threshold": 3},
-                        {"category": "HARM_CATEGORY_SEXUAL", "threshold": 3},
-                        {"category": "HARM_CATEGORY_MEDICAL", "threshold": 3},
-                        {"category": "HARM_CATEGORY_DANGEROUS", "threshold": 3}],
+genai.configure(api_key = genai_key)
+
+generation_config = genai.GenerationConfig(
+    temperature = 0.9,
+    top_p = 1,
+    top_k = 1,
+    max_output_tokens = 2048
+)
+
+safety_settings = [
+    {
+        "category": "HARM_CATEGORY_HARASSMENT",
+        "threshold": "BLOCK_ONLY_HIGH"
+    },
+    {
+        "category": "HARM_CATEGORY_HATE_SPEECH",
+        "threshold": "BLOCK_ONLY_HIGH"
+    },
+    {
+        "category": "HARM_CATEGORY_SEXUALLY_EXPLICIT",
+        "threshold": "BLOCK_ONLY_HIGH"
+    },
+    {
+        "category": "HARM_CATEGORY_DANGEROUS_CONTENT",
+        "threshold": "BLOCK_ONLY_HIGH"
     }
+]
+
+model = genai.GenerativeModel(
+    model_name = "gemini-pro",
+    generation_config = generation_config,
+    safety_settings = safety_settings
+)
 
 client = commands.Bot()
 
 
 def split_responses(response):
-    sentences = []
+    sentences = re.split('(?<! [A-Z])\\.(?= [A-Z])', response)
     current_sentence = ""
     sections = [""]
     
@@ -42,18 +60,17 @@ def split_responses(response):
     
     index = 0
     for sentence in sentences:
-        if sections[index] == "":
-            sections[index] += sentence
-        elif len(sections[index] + sentence) < 2000:
-            sections[index] += sentence
-        elif len(sections[index] + sentence) > 2000:
+        new_sentence = " " + sentence if sections[index] else sentence
+        if len(sections[index] + new_sentence) <= 2000:
+            sections[index] += new_sentence
+        else:
             index += 1
             sections.append(sentence)
     
     return sections
 
 
-@client.slash_command(name = "text", description = "Text prompt with PaLM AI")
+@client.slash_command(name = "text", description = "Text prompt with Gemini Pro")
 async def text(context, prompt: str):
     await context.defer()
     
@@ -61,7 +78,7 @@ async def text(context, prompt: str):
     print("Prompt: " + prompt)
     
     try:
-        response = palm.generate_text(**defaults, prompt = prompt).result
+        response = model.generate_content(contents = prompt).text
         
         if response is None:
             print("Text | No Response Available\n")
@@ -71,14 +88,14 @@ async def text(context, prompt: str):
             print("Response: " + response + "\n")
             sections = split_responses(response)
             for section in sections:
-                await context.respond(section)
+                await context.respond(section.strip())
         
         else:
             print("Response: " + response + "\n")
             await context.respond(response)
     
-    except (Exception,):
-        print("\033[31mERROR\033[0m")
+    except Exception as e:
+        print(f"\033[31mERROR: {e}\033[0m")
         await context.respond("An error has occurred. Please try again.")
 
 
@@ -103,4 +120,3 @@ if __name__ == "__main__":
           "Log:\n")
     client.run(bot_token)
     print("\nProgram Stopped Successfully\n")
-    

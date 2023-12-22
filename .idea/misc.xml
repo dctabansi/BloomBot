@@ -3,8 +3,5 @@
   <component name="Black">
     <option name="sdkName" value="Python 3.12 (BloomBot)" />
   </component>
-  <component name="GithubDefaultAccount">
-    <option name="defaultAccountId" value="2464e1de-e1b0-4287-a15d-7ca0c598d098" />
-  </component>
   <component name="ProjectRootManager" version="2" project-jdk-name="Python 3.11" project-jdk-type="Python SDK" />
 </project>
