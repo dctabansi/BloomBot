@@ -1,0 +1,4 @@
+py-cord
+PyYAML~=6.0.2
+google-generativeai
+protobuf~=5.29.5

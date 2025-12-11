@@ -7,7 +7,7 @@ import re
 with open("creds.yaml", 'r') as creds:
     credentials = yaml.safe_load(creds)
     bot_token = credentials['bot_token']
-    genai_key = credentials['palm_key']
+    genai_key = credentials['genai_key']
 
 genai.configure(api_key = genai_key)
 
@@ -38,8 +38,7 @@ safety_settings = [
 ]
 
 model = genai.GenerativeModel(
-    model_name = "gemini-pro",
-    generation_config = generation_config,
+    model_name = "gemini-1.5-pro",    generation_config = generation_config,
     safety_settings = safety_settings
 )
 
